@@ -11,7 +11,7 @@ INA219 ina219;
 // Var
 unsigned long startTime;
 unsigned long lastRead;
-unsigned long sec;
+unsigned long upTime;
 
 float voltage;
 float current;
@@ -25,12 +25,16 @@ float minCurrent;
 
 float ignoreCurrent;
 
+int sec;
+int min;
+int hour;
+
 char str[9];
 
 void initData()
 {
   startTime = millis();
-  sec = 0;
+  upTime = 0;
 
   voltage = 0;
   current = 0;
@@ -71,8 +75,6 @@ void readSensor()
 
 void update()
 {
-  sec = (lastRead - startTime) / 1000;
-
   //max voltage and current
   if (voltage > maxVoltage)
     maxVoltage = voltage;
@@ -88,6 +90,11 @@ void update()
     minCurrent = current;
   if (minVoltage > voltage)
     minVoltage = voltage;
+
+  upTime = (lastRead - startTime) / 1000;
+  hour = upTime / 3600;
+  min = (upTime - hour * 3600)/60;
+  sec = upTime%60;
 }
 
 void drawTemplate()
@@ -133,8 +140,7 @@ void drawTemplate()
   // line 6
   oled.set_pos(0, 5);
   oled.print("Time");
-  oled.set_pos(106, 5);
-  oled.print("sec");
+
   
   // line 7
   oled.set_pos(0, 6);
@@ -187,8 +193,8 @@ void printData()
   oled.print(str);
 
   // line 6 - time
-  oled.set_pos(65, 5);
-  intToString(sec,str);
+  oled.set_pos(80, 5);
+  sprintf(str,"%02d:%02d:%02d",hour,min,sec);
   oled.print(str);
 
   // line 8 - threshold
@@ -206,7 +212,6 @@ void setup()
 
 void loop()
 {
-
   readSensor();
   update();
   printData();

@@ -6,6 +6,5 @@
 #define POWER 2
 
 void floatToString(float input,char* str,int mode);
-void intToString(int input,char* str);
 
 #endif

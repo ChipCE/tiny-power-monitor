@@ -60,8 +60,3 @@ void floatToString(float num, char *str, int mode)
     }
 }
 
-
-void intToString(int input,char* str)
-{
-    sprintf(str, "%8d", input);
-}
