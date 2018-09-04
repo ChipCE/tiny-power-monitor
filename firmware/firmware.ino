@@ -7,6 +7,9 @@
 // Devices
 SSD1306 oled;
 INA219 ina219;
+#define THRESHOLD_POT 3
+#define FUNC_1 4
+#define FUNC_2 1
 
 // Var
 unsigned long startTime;
@@ -29,7 +32,40 @@ int sec;
 int min;
 int hour;
 
+int mode;
+int oldMode;
 char str[9];
+
+
+void update();
+void readSensor();
+void initData();
+//common
+void printData();
+void drawTemplate();
+//for advance mode(1)
+void drawAdvanceTemplate();
+void printAdvanceData();
+//for simple mode(0)
+void drawSimpleTemplate();
+void printSimpleData();
+
+void setup()
+{
+  initData();
+  pinMode(FUNC_1,INPUT_PULLUP);
+  pinMode(FUNC_2,INPUT_PULLUP);
+}
+
+
+void loop()
+{
+  readSensor();
+  update();
+  drawTemplate();
+  printData();
+}
+
 
 void initData()
 {
@@ -46,6 +82,9 @@ void initData()
   minCurrent = 0;
   maxCurrent = 0;
 
+  mode = 0;
+  oldMode = -1;
+
   ignoreCurrent = 0;
 
   TinyWireM.begin();
@@ -59,7 +98,7 @@ void readSensor()
   current = ina219.read_current();
   power = ina219.read_power();
 
-  int ignoreVal = analogRead(3);
+  int ignoreVal = analogRead(THRESHOLD_POT);
   ignoreCurrent = 0.5 * ignoreVal / 1024;
 
   //ignore current value if under threshold
@@ -71,6 +110,11 @@ void readSensor()
 
   powerConsumption = powerConsumption + power / 1000 * (millis() - lastRead) / 3600;
   lastRead = millis();
+
+  if(digitalRead(FUNC_1)==LOW)
+    mode = 0;
+  if(digitalRead(FUNC_2)==LOW)
+    mode = 1;
 }
 
 void update()
@@ -97,10 +141,55 @@ void update()
   sec = upTime%60;
 }
 
+
 void drawTemplate()
+{
+  if(mode!=oldMode)
+  {
+    oldMode = mode;
+    if(mode)
+      drawAdvanceTemplate();
+    else
+      drawSimpleTemplate();
+  }
+}
+
+
+void printData()
+{
+  if(mode)
+    printAdvanceData();
+  else
+    printSimpleData();
+}
+
+
+void drawSimpleTemplate()
 {
   //clear screen
   oled.fill(0x00);
+
+  //bigger font size
+  oled.set_font_size(3);
+
+  oled.set_pos(0, 2);
+  oled.print("aaa");
+}
+
+void printSimpleData()
+{
+  //oled.set_pos(24, 0);
+  //oled.print("simple data");
+}
+
+
+void drawAdvanceTemplate()
+{
+  //clear screen
+  oled.fill(0x00);
+
+  //small font size
+  oled.set_font_size(1);
 
   // line 1
   oled.set_pos(0, 0);
@@ -151,15 +240,10 @@ void drawTemplate()
   oled.print("Threshold");
   oled.set_pos(106, 7);
   oled.print("mA");
-  
 }
 
-
-
-
-void printData()
+void printAdvanceData()
 {
-  
   // line 1 - voltage
   oled.set_pos(24, 0);
   floatToString(voltage,str,VOLTAGE);
@@ -201,18 +285,4 @@ void printData()
   oled.set_pos(70, 7);
   floatToString(ignoreCurrent,str,CURRENT);
   oled.print(str);
-}
-
-void setup()
-{
-  initData();
-  drawTemplate();
-}
-
-
-void loop()
-{
-  readSensor();
-  update();
-  printData();
 }
