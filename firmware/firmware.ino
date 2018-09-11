@@ -34,7 +34,7 @@ int hour;
 
 int mode;
 int oldMode;
-char str[9];
+char str[13];
 
 
 void update();
@@ -169,17 +169,72 @@ void drawSimpleTemplate()
   //clear screen
   oled.fill(0x00);
 
-  //bigger font size
-  oled.set_font_size(3);
+  // line 1
+  oled.set_pos(0, 0);
+  oled.print("Power monitor       v1.0");
+  
+  // line 2
+  oled.set_pos(0, 1);
+  oled.print("------------------------");
 
-  oled.set_pos(0, 2);
-  oled.print("aaa");
+  //line 3 
+  //blank
+
+  // line 4
+  oled.set_pos(40, 3);
+  oled.print("V");
+  oled.set_pos(96, 3);
+  oled.print("mA");
+  
+  // line 5
+  //blank
+
+  // line 6 - power
+  oled.set_pos(0, 5);
+  oled.print("Power");
+  oled.set_pos(106, 5);
+  oled.print("mWh");
+  
+  // line 7
+  oled.set_pos(0, 6);
+  oled.print("R-load");
+  oled.set_pos(106, 6);
+  oled.print("Ohm");
+
+  // line 8
+  oled.set_pos(0, 7);
+  oled.print("Threshold");
+  oled.set_pos(106, 7);
+  oled.print("mA");
 }
 
 void printSimpleData()
 {
-  //oled.set_pos(24, 0);
-  //oled.print("simple data");
+  // line 4 - voltage
+  oled.set_pos(14, 3);
+  floatToString(voltage,str,VOLTAGE);
+  oled.print(str);
+
+  // line 4 - current
+  oled.set_pos(60, 3);
+  floatToString(current,str,CURRENT);
+  oled.print(str);
+  
+  // line 6 - power
+  oled.set_pos(45, 5);
+  floatToString(powerConsumption,str,POWER);
+  oled.print(str);
+
+  //line 7 rload
+  oled.set_pos(55, 6);
+  float rLoad = voltage/(current/1000);
+  floatToString(rLoad,str,RLOAD);
+  oled.print(str);
+
+  // line 8 - threshold
+  oled.set_pos(70, 7);
+  floatToString(ignoreCurrent,str,CURRENT);
+  oled.print(str);
 }
 
 
@@ -187,9 +242,6 @@ void drawAdvanceTemplate()
 {
   //clear screen
   oled.fill(0x00);
-
-  //small font size
-  oled.set_font_size(1);
 
   // line 1
   oled.set_pos(0, 0);
@@ -272,7 +324,7 @@ void printAdvanceData()
   oled.print(str);
   
   // line 5 - power
-  oled.set_pos(60, 4);
+  oled.set_pos(45, 4);
   floatToString(powerConsumption,str,POWER);
   oled.print(str);
 
