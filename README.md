@@ -1,4 +1,4 @@
-![Image](https://github.com/ChipTechno/tiny-power-monitor/image.png)   
+![Image](https://github.com/ChipTechno/tiny-power-monitor/blob/master/image.png)   
 
 # Attiny85-ina219-ssd1306 Power monitor
 Small power monitor using attiny85 and ina219. Can be operate with a single AA battery.
