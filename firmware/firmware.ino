@@ -1,7 +1,6 @@
 #include <TinyWireM.h>
 #include "ssd1306.h"
 #include "ina219.h"
-// for some reason sprintf with %f not work , use this custom lib instead
 #include "dataConverter.h"
 
 // Devices
@@ -10,16 +9,14 @@ INA219 ina219;
 #define THRESHOLD_POT 3
 #define FUNC_1 4
 #define FUNC_2 1
+#define OUTPUT_INTERVAL 500
+#define DEBOUNCE_TIME 50
 
 // Var
-unsigned long startTime;
-unsigned long lastRead;
-unsigned long upTime;
-
 float voltage;
 float current;
 float power;
-float powerConsumption;
+float rLoad;
 
 float maxVoltage;
 float minVoltage;
@@ -28,33 +25,62 @@ float minCurrent;
 
 float ignoreCurrent;
 
-int sec;
-int min;
-int hour;
-
 int mode;
 int oldMode;
 char str[13];
 
+unsigned long lastOutput;
+
+void flashScreen()
+{
+  oled.fill(0x00);
+  /*
+  Tiny Power Monitor(38)
+   */
+  oled.set_pos(6,0);
+  oled.print("Tiny Power Monitor v1.2");
+  oled.set_pos(0, 1);
+  oled.print("-------------------------");
+  oled.set_pos(12, 2);
+  oled.print("* ATTINY85");
+  oled.set_pos(12, 3);
+  oled.print("* INA219");
+  oled.set_pos(12, 4);
+  oled.print("* SSD1306");
+  oled.set_pos(12, 5);
+  oled.print("* XCL102D333CR-G");
+
+  oled.set_pos(0, 6);
+  oled.print("-------------------------");
+  oled.set_pos(2,7);
+  oled.print("ChipCE             GPL v3");
+  delay(1000);
+}
 
 void update();
 void readSensor();
 void initData();
-//common
+//common - call this function will auto draw 2 of the selected modes bellow
 void printData();
 void drawTemplate();
 //for advance mode(1)
-void drawAdvanceTemplate();
-void printAdvanceData();
-//for simple mode(0)
-void drawSimpleTemplate();
-void printSimpleData();
+void drawDetailModeTemplate();
+void printDetailData();
+//for graph mode(1)
+void drawGraphModeTemplate();
+void printGraphData();
+int graphPos;
+int graphCurrentRange[] = {0,100,500,1000,2000,3000,4000};
+int graphUpperCurrent;
+int graphVoltageRange[] = {0,4,7,15,27,35};
+int graphUpperVoltage;
 
 void setup()
 {
   initData();
   pinMode(FUNC_1,INPUT_PULLUP);
   pinMode(FUNC_2,INPUT_PULLUP);
+  flashScreen();
 }
 
 
@@ -69,13 +95,10 @@ void loop()
 
 void initData()
 {
-  startTime = millis();
-  upTime = 0;
-
   voltage = 0;
   current = 0;
   power = 0;
-  powerConsumption = 0;
+  rLoad = 0;
 
   maxVoltage = 0;
   minVoltage = 0;
@@ -86,9 +109,15 @@ void initData()
   oldMode = -1;
 
   ignoreCurrent = 0;
+  lastOutput = 0;
+
+  graphPos = 0;
+  graphUpperCurrent = 100;
+  graphUpperVoltage = 4;
 
   TinyWireM.begin();
   oled.begin();
+  delay(100);
   ina219.begin();
 }
 
@@ -97,6 +126,7 @@ void readSensor()
   voltage = ina219.read_bus_voltage();
   current = ina219.read_current();
   power = ina219.read_power();
+  rLoad = voltage/(current/1000);
 
   int ignoreVal = analogRead(THRESHOLD_POT);
   ignoreCurrent = 0.5 * ignoreVal / 1024;
@@ -108,13 +138,16 @@ void readSensor()
     power = 0;
   }
 
-  powerConsumption = powerConsumption + power / 1000 * (millis() - lastRead) / 3600;
-  lastRead = millis();
-
   if(digitalRead(FUNC_1)==LOW)
     mode = 0;
   if(digitalRead(FUNC_2)==LOW)
-    mode = 1;
+  {
+    if(mode == 5)
+      mode = 1;
+    else
+      mode += 1;
+    delay(DEBOUNCE_TIME);
+  }
 }
 
 void update()
@@ -125,20 +158,17 @@ void update()
   if (current > maxCurrent)
     maxCurrent = current;
 
-  //min voltage & current
+  //min voltage & current - non-zero
   if (minCurrent == 0)
     minCurrent = current;
   if (minVoltage == 0)
     minVoltage = voltage;
-  if ((minCurrent > current) && (current != 0))
-    minCurrent = current;
-  if (minVoltage > voltage)
-    minVoltage = voltage;
 
-  upTime = (lastRead - startTime) / 1000;
-  hour = upTime / 3600;
-  min = (upTime - hour * 3600)/60;
-  sec = upTime%60;
+  //min voltage & current
+  if ((minCurrent > current) && (current > 0))
+    minCurrent = current;
+  if ((minVoltage > voltage) && (voltage > 0))
+    minVoltage = voltage;
 }
 
 
@@ -147,98 +177,83 @@ void drawTemplate()
   if(mode!=oldMode)
   {
     oldMode = mode;
-    if(mode)
-      drawAdvanceTemplate();
+    if(mode == 0)
+      drawDetailModeTemplate();
     else
-      drawSimpleTemplate();
+      drawGraphModeTemplate();
   }
 }
 
 
 void printData()
 {
-  if(mode)
-    printAdvanceData();
+  if(mode != oldMode)
+  {
+    if(mode == 0)
+      printDetailData();
+    else
+      printGraphData();
+  }
   else
-    printSimpleData();
+  {
+    if(millis() - lastOutput > OUTPUT_INTERVAL)
+    {
+      lastOutput = millis();
+      if(mode == 0)
+        printDetailData();
+      else
+        printGraphData();
+    }
+  }
 }
 
 
-void drawSimpleTemplate()
+void drawGraphModeTemplate()
 {
   //clear screen
   oled.fill(0x00);
-
-  // line 1
-  oled.set_pos(0, 0);
-  oled.print("Power monitor       v1.0");
-  
-  // line 2
-  oled.set_pos(0, 1);
-  oled.print("------------------------");
-
-  //line 3 
-  //blank
-
-  // line 4
-  oled.set_pos(40, 3);
+  graphPos = 0;
+  //calc graphUpperCurrent
+  int pos;
+  for(pos=0;pos<7;pos++)
+    if(maxCurrent < graphCurrentRange[pos])
+    {
+      graphUpperCurrent = graphCurrentRange[pos];
+      break;
+    }
+  //calc graphUpperVoltage
+  for(pos=0;pos<6;pos++)
+    if(maxVoltage < graphVoltageRange[pos])
+    {
+      graphUpperVoltage = graphVoltageRange[pos];
+      break;
+    }
+  //draw template
+  oled.set_pos(117,1);
+  oled.print("mA");
+  oled.set_pos(122,5);
   oled.print("V");
-  oled.set_pos(96, 3);
-  oled.print("mA");
-  
-  // line 5
-  //blank
 
-  // line 6 - power
-  oled.set_pos(0, 5);
-  oled.print("Power");
-  oled.set_pos(106, 5);
-  oled.print("mWh");
-  
-  // line 7
-  oled.set_pos(0, 6);
-  oled.print("R-load");
-  oled.set_pos(106, 6);
-  oled.print("Ohm");
-
-  // line 8
-  oled.set_pos(0, 7);
-  oled.print("Threshold");
-  oled.set_pos(106, 7);
-  oled.print("mA");
 }
 
-void printSimpleData()
+void printGraphData()
 {
-  // line 4 - voltage
-  oled.set_pos(14, 3);
-  floatToString(voltage,str,VOLTAGE);
-  oled.print(str);
+  oled.set_pos(93, 2);
+  oled.print_float(current,7);
 
-  // line 4 - current
-  oled.set_pos(60, 3);
-  floatToString(current,str,CURRENT);
-  oled.print(str);
-  
-  // line 6 - power
-  oled.set_pos(45, 5);
-  floatToString(powerConsumption,str,POWER);
-  oled.print(str);
+  oled.set_pos(103, 6);
+  oled.print_float(voltage,5);
 
-  //line 7 rload
-  oled.set_pos(55, 6);
-  float rLoad = voltage/(current/1000);
-  floatToString(rLoad,str,RLOAD);
-  oled.print(str);
+  oled.plot_area(graphPos,0,3,current,0,graphUpperCurrent);
+  oled.plot_area(graphPos,4,3,voltage,0,graphUpperVoltage);
+  graphPos ++;
 
-  // line 8 - threshold
-  oled.set_pos(70, 7);
-  floatToString(ignoreCurrent,str,CURRENT);
-  oled.print(str);
+  if(graphPos == 90)
+    drawGraphModeTemplate();
 }
 
 
-void drawAdvanceTemplate()
+void drawDetailModeTemplate()
 {
   //clear screen
   oled.fill(0x00);
@@ -246,95 +261,88 @@ void drawAdvanceTemplate()
   // line 1
   oled.set_pos(0, 0);
   oled.print("Now");
-  oled.set_pos(50, 0);
+  oled.set_pos(60, 0);
   oled.print("V");
-  oled.set_pos(106, 0);
+  oled.set_pos(116, 0);
   oled.print("mA");
   
   // line 2
   oled.set_pos(0, 1);
-  oled.print("------------------------");
+  oled.print("-------------------------");
 
 
   // line 3
   oled.set_pos(0, 2);
   oled.print("Min");
-  oled.set_pos(50, 2);
+  oled.set_pos(60, 2);
   oled.print("V");
-  oled.set_pos(106, 2);
+  oled.set_pos(116, 2);
   oled.print("mA");
 
   // line 4
   oled.set_pos(0, 3);
   oled.print("Max");
-  oled.set_pos(50, 3);
+  oled.set_pos(60, 3);
   oled.print("V");
-  oled.set_pos(106, 3);
+  oled.set_pos(116, 3);
   oled.print("mA");
   
   // line 5
   oled.set_pos(0, 4);
   oled.print("Power");
-  oled.set_pos(106, 4);
-  oled.print("mWh");
+  oled.set_pos(116, 4);
+  oled.print("mW");
 
   // line 6
   oled.set_pos(0, 5);
-  oled.print("Time");
+  oled.print("R-load");
+  oled.set_pos(121, 5);
+  oled.print("R");
 
   
   // line 7
   oled.set_pos(0, 6);
-  oled.print("------------------------");
+  oled.print("-------------------------");
 
   // line 8
   oled.set_pos(0, 7);
   oled.print("Threshold");
-  oled.set_pos(106, 7);
+  oled.set_pos(116, 7);
   oled.print("mA");
 }
 
-void printAdvanceData()
+void printDetailData()
 {
   // line 1 - voltage
-  oled.set_pos(24, 0);
-  floatToString(voltage,str,VOLTAGE);
-  oled.print(str);
+  oled.set_pos(34, 0);
+  oled.print_float(voltage,5);
   // line 1 - current
-  oled.set_pos(70, 0);
-  floatToString(current,str,CURRENT);
-  oled.print(str);
+  oled.set_pos(80, 0);
+  oled.print_float(current,7);
   
   // line 3 - min voltage
-  oled.set_pos(24, 2);
-  floatToString(minVoltage,str,VOLTAGE);
-  oled.print(str);
+  oled.set_pos(34, 2);
+  oled.print_float(minVoltage,5);
   // line 3 - min current
-  oled.set_pos(70, 2);
-  floatToString(minCurrent,str,CURRENT);
-  oled.print(str);
+  oled.set_pos(80, 2);
+  oled.print_float(minCurrent,7);
 
   // line 4 - max voltage
-  oled.set_pos(24, 3);
-  floatToString(maxVoltage,str,VOLTAGE);
-  oled.print(str);
+  oled.set_pos(34, 3);
+  oled.print_float(maxVoltage,5);
   // line 4 - max current
-  oled.set_pos(70, 3);
-  floatToString(maxCurrent,str,CURRENT);
-  oled.print(str);
+  oled.set_pos(80, 3);
+  oled.print_float(maxCurrent,7);
   
   // line 5 - power
-  oled.set_pos(45, 4);
-  floatToString(powerConsumption,str,POWER);
-  oled.print(str);
+  oled.set_pos(75, 4);
+  oled.print_float(power,8);
 
-  // line 6 - time
-  oled.set_pos(80, 5);
-  sprintf(str,"%02d:%02d:%02d",hour,min,sec);
-  oled.print(str);
+  //line 6 rload
+  oled.set_pos(65, 5);
+  oled.print_float(rLoad,10);
 
   // line 8 - threshold
-  oled.set_pos(70, 7);
-  floatToString(ignoreCurrent,str,CURRENT);
-  oled.print(str);
+  oled.set_pos(80, 7);
+  oled.print_float(ignoreCurrent,7);
 }
