@@ -126,7 +126,10 @@ void readSensor()
   voltage = ina219.read_bus_voltage();
   current = ina219.read_current();
   power = ina219.read_power();
-  rLoad = voltage/(current/1000);
+  if((current <= ignoreCurrent) || (voltage <0))
+	rLoad = 0;
+else
+	rLoad = voltage/(current/1000);
 
   int ignoreVal = analogRead(THRESHOLD_POT);
   ignoreCurrent = 0.5 * ignoreVal / 1024;
