@@ -13,10 +13,12 @@ INA219 ina219;
 #define DEBOUNCE_TIME 50
 
 // Var
+unsigned long lastRead;
 float voltage;
 float current;
 float power;
 float rLoad;
+float powerConsumption;
 
 float maxVoltage;
 float minVoltage;
@@ -95,10 +97,13 @@ void loop()
 
 void initData()
 {
+  lastRead = millis();
+
   voltage = 0;
   current = 0;
   power = 0;
   rLoad = 0;
+  powerConsumption = 0;
 
   maxVoltage = 0;
   minVoltage = 0;
@@ -140,6 +145,12 @@ void readSensor()
     current = 0;
     power = 0;
   }
+
+  //
+  if(millis()<lastRead)
+    lastRead = 0;
+  powerConsumption = powerConsumption + power / 1000 * (millis() - lastRead) / 3600;
+  lastRead = millis();
 
   if(digitalRead(FUNC_1)==LOW)
     mode = 0;
@@ -302,10 +313,23 @@ void drawDetailModeTemplate()
   oled.set_pos(121, 5);
   oled.print("R");
 
-  
   // line 7
+  //oled.set_pos(0, 6);
+  //oled.print("-------------------------");
   oled.set_pos(0, 6);
-  oled.print("-------------------------");
+  oled.print("R-load");
+  oled.set_pos(106, 6);
+  oled.print("mWh");
+
+
+
+  oled.set_pos(45, 5);
+  floatToString(powerConsumption,str,POWER);
+  oled.print(str);
+
+  
+  
+
 
   // line 8
   oled.set_pos(0, 7);
@@ -333,6 +357,7 @@ void printDetailData()
   // line 4 - max voltage
   oled.set_pos(34, 3);
   oled.print_float(maxVoltage,5);
+
   // line 4 - max current
   oled.set_pos(80, 3);
   oled.print_float(maxCurrent,7);
@@ -344,6 +369,10 @@ void printDetailData()
   //line 6 rload
   oled.set_pos(65, 5);
   oled.print_float(rLoad,10);
+
+  // line 7 Power consumption
+  oled.set_pos(65, 6);
+  oled.print_float(powerConsumption,10);
 
   // line 8 - threshold
   oled.set_pos(80, 7);
