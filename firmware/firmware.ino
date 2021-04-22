@@ -38,7 +38,7 @@ void flashScreen()
   Tiny Power Monitor(38)
    */
   oled.set_pos(6,0);
-  oled.print("Tiny Power Monitor v1.2");
+  oled.print("Tiny Power Monitor v1.3");
   oled.set_pos(0, 1);
   oled.print("-------------------------");
   oled.set_pos(12, 2);
@@ -127,9 +127,9 @@ void readSensor()
   current = ina219.read_current();
   power = ina219.read_power();
   if((current <= ignoreCurrent) || (voltage <0))
-	rLoad = 0;
-else
-	rLoad = voltage/(current/1000);
+	  rLoad = 0;
+  else
+	  rLoad = voltage/(current/1000);
 
   int ignoreVal = analogRead(THRESHOLD_POT);
   ignoreCurrent = 0.5 * ignoreVal / 1024;
