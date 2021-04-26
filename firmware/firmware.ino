@@ -243,9 +243,9 @@ void drawGraphModeTemplate()
       break;
     }
   //draw template
-  oled.set_pos(117,1);
+  oled.set_pos(118,1);
   oled.print("mA");
-  oled.set_pos(122,5);
+  oled.set_pos(123,5);
   oled.print("V");
 
 }
@@ -275,67 +275,55 @@ void drawDetailModeTemplate()
   // line 1
   oled.set_pos(0, 0);
   oled.print("Now");
-  oled.set_pos(60, 0);
+  oled.set_pos(65, 0);
   oled.print("V");
   oled.set_pos(116, 0);
   oled.print("mA");
+
+  // line 1
+  oled.set_pos(121, 1);
+  oled.print("R");
+  oled.set_pos(60, 1);
+  oled.print("mW");
   
-  // line 2
-  oled.set_pos(0, 1);
+  // line 3
+  oled.set_pos(0, 2);
   oled.print("-------------------------");
 
 
-  // line 3
-  oled.set_pos(0, 2);
-  oled.print("Min");
-  oled.set_pos(60, 2);
-  oled.print("V");
-  oled.set_pos(116, 2);
-  oled.print("mA");
-
   // line 4
   oled.set_pos(0, 3);
-  oled.print("Max");
-  oled.set_pos(60, 3);
+  oled.print("Min");
+  oled.set_pos(65, 3);
   oled.print("V");
   oled.set_pos(116, 3);
   oled.print("mA");
-  
+
   // line 5
   oled.set_pos(0, 4);
-  oled.print("Power");
+  oled.print("Max");
+  oled.set_pos(65, 4);
+  oled.print("V");
   oled.set_pos(116, 4);
-  oled.print("mW");
-
-  // line 6
+  oled.print("mA");
+  
+    // line 6
   oled.set_pos(0, 5);
-  oled.print("R-load");
-  oled.set_pos(121, 5);
-  oled.print("R");
+  oled.print("Threshold");
+  oled.set_pos(116, 5);
+  oled.print("mA");
 
   // line 7
-  //oled.set_pos(0, 6);
-  //oled.print("-------------------------");
   oled.set_pos(0, 6);
-  oled.print("R-load");
-  oled.set_pos(106, 6);
+  oled.print("-------------------------");
+
+
+  oled.set_pos(0, 7);
+  oled.print("Energy");
+  oled.set_pos(111, 7);
   oled.print("mWh");
 
 
-
-  oled.set_pos(45, 5);
-  floatToString(powerConsumption,str,POWER);
-  oled.print(str);
-
-  
-  
-
-
-  // line 8
-  oled.set_pos(0, 7);
-  oled.print("Threshold");
-  oled.set_pos(116, 7);
-  oled.print("mA");
 }
 
 void printDetailData()
@@ -346,35 +334,38 @@ void printDetailData()
   // line 1 - current
   oled.set_pos(80, 0);
   oled.print_float(current,7);
-  
-  // line 3 - min voltage
-  oled.set_pos(34, 2);
-  oled.print_float(minVoltage,5);
-  // line 3 - min current
-  oled.set_pos(80, 2);
-  oled.print_float(minCurrent,7);
 
-  // line 4 - max voltage
-  oled.set_pos(34, 3);
-  oled.print_float(maxVoltage,5);
-
-  // line 4 - max current
-  oled.set_pos(80, 3);
-  oled.print_float(maxCurrent,7);
-  
-  // line 5 - power
-  oled.set_pos(75, 4);
+  // line 2 - power
+  oled.set_pos(19, 1);
   oled.print_float(power,8);
 
-  //line 6 rload
-  oled.set_pos(65, 5);
-  oled.print_float(rLoad,10);
+  //line 2 rload
+  oled.set_pos(75, 1);
+  oled.print_float(rLoad,8);
 
-  // line 7 Power consumption
-  oled.set_pos(65, 6);
+  
+  // line 4 - min voltage
+  oled.set_pos(34, 3);
+  oled.print_float(minVoltage,5);
+  // line 4 - min current
+  oled.set_pos(80, 3);
+  oled.print_float(minCurrent,7);
+
+  // line 5 - max voltage
+  oled.set_pos(34, 4);
+  oled.print_float(maxVoltage,5);
+
+  // line 5 - max current
+  oled.set_pos(80, 4);
+  oled.print_float(maxCurrent,7);
+
+  // line 6 - threshold
+  oled.set_pos(80, 5);
+  oled.print_float(ignoreCurrent,7);
+
+  // line 8 Power consumption
+  oled.set_pos(55, 7);
   oled.print_float(powerConsumption,10);
 
-  // line 8 - threshold
-  oled.set_pos(80, 7);
-  oled.print_float(ignoreCurrent,7);
+
 }
